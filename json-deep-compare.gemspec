@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = JsonDeepCompare::VERSION
   spec.authors       = ["Francis Hwang"]
   spec.email         = ["sera@fhwang.net"]
-  spec.description   = %q{TODO: Write a gem description}
-  spec.summary       = %q{TODO: Write a gem summary}
+  spec.description   = %q{For quickly finding differences between two large JSON documents.}
+  spec.summary       = %q{For quickly finding differences between two large JSON documents.}
   spec.homepage      = ""
   spec.license       = "MIT"
 
