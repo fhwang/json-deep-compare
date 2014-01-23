@@ -145,4 +145,19 @@ class DocumentComparisonTestCase < Test::Unit::TestCase
     )
     assert comparison.equal?
   end
+
+  def test_equality_proc_option
+    lval = {'one' => 2, 'three' => "He says 'hi'"}
+    rval = {'one' => 2, 'three' => "He says \"hi\""}
+    comparison = JsonDeepCompare::DocumentComparison.new(
+      lval, rval, equality: Proc.new { |lval, rval|
+        if lval.is_a?(String) && rval.is_a?(String)
+          lval.gsub(/"/, "'") == rval.gsub(/"/, "'")
+        else
+          lval == rval
+        end
+      }
+    )
+    assert comparison.equal?
+  end
 end

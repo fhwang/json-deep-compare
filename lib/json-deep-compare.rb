@@ -61,6 +61,10 @@ module JsonDeepCompare
       value.respond_to?(:empty?) ? value.empty? : !value
     end
 
+    def blank_equality?
+      @options[:blank_equality]
+    end
+
     def difference_message
       unless equal?
         if leaf?
@@ -77,12 +81,21 @@ module JsonDeepCompare
 
     def equal?
       if leaf?
-        selector_excluded? || 
+        if selector_excluded?
+          true
+        elsif equality_proc
+          equality_proc.call(@left_value, @right_value)
+        else
           @left_value == @right_value || 
-          (@options[:blank_equality] && blank?(@left_value) && blank?(@right_value))
+            (blank_equality? && blank?(@left_value) && blank?(@right_value))
+        end
       else
         @children.all?(&:equal?)
       end
+    end
+
+    def equality_proc
+      @options[:equality]
     end
 
     def excerptable_difference?
