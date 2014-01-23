@@ -1,25 +1,45 @@
 module JsonDeepCompare
   VERSION = '0.0.1'
 
+  class DocumentComparison
+    attr_reader :left_value, :right_value
+
+    def initialize(left_value, right_value, options = {})
+      if exclusions = options[:exclusions]
+        options[:exclusions] = [exclusions] unless exclusions.is_a?(Array)
+      else
+        options[:exclusions] = []
+      end
+      @root_comparison = NodeComparison.new(
+        left_value, right_value, ":root", options
+      )
+    end
+
+    def difference_message
+      @root_comparison.difference_message
+    end
+
+    def equal?
+      @root_comparison.equal?
+    end
+  end
+
   class NodeComparison
     ExcerptPadding = 15
     attr_reader :left_value, :right_value, :selector
 
-    def initialize(left_value, right_value, options = {})
-      @left_value, @right_value = left_value, right_value             
-      @selector = options[:selector] || ':root'
-      @exclusions = options[:exclusions]
-      @exclusions = [@exclusions] unless @exclusions.is_a?(Array)
-      @blank_equality = options[:blank_equality]
+    def initialize(left_value, right_value, selector, options = {})
+      @left_value, @right_value, @selector, @options =
+        left_value, right_value, selector, options
       @children = []
       if left_value.is_a?(Hash)
         if right_value.is_a?(Hash)
           left_value.each do |key, left_sub_value|
             @children << NodeComparison.new(
-              left_sub_value, right_value[key], 
-              blank_equality: @blank_equality,
-              exclusions: @exclusions,
-              selector: "#{selector} > .#{key}"
+              left_sub_value, 
+              right_value[key], 
+              "#{selector} > .#{key}", 
+              options
             )
           end
         end
@@ -27,10 +47,10 @@ module JsonDeepCompare
         if right_value.is_a?(Array)
           left_value.each_with_index do |left_sub_value, i|
             @children << NodeComparison.new(
-              left_sub_value, right_value[i], 
-              blank_equality: @blank_equality,
-              exclusions: @exclusions,
-              selector: "#{selector} :nth-child(#{i+1})"
+              left_sub_value, 
+              right_value[i], 
+              "#{selector} :nth-child(#{i+1})",
+              options
             )
           end
         end
@@ -59,7 +79,7 @@ module JsonDeepCompare
       if leaf?
         selector_excluded? || 
           @left_value == @right_value || 
-          (@blank_equality && blank?(@left_value) && blank?(@right_value))
+          (@options[:blank_equality] && blank?(@left_value) && blank?(@right_value))
       else
         @children.all?(&:equal?)
       end
@@ -105,7 +125,7 @@ module JsonDeepCompare
     end
 
     def selector_excluded?
-      @exclusions.any? { |exclusion|
+      @options[:exclusions].any? { |exclusion|
         if exclusion.is_a?(String)
           exclusion == @selector
         else
@@ -126,7 +146,7 @@ module JsonDeepCompare
 
   module Assertions
     def assert_json_equal(expected, actual, exclusions = nil)
-      comparison = NodeComparison.new(expected, actual, exclusions: exclusions)
+      comparison = DocumentComparison.new(expected, actual, exclusions: exclusions)
       unless comparison.equal?
         fail comparison.difference_message
       end
