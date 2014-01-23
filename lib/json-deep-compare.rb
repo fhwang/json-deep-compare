@@ -10,13 +10,16 @@ module JsonDeepCompare
       @selector = options[:selector] || ':root'
       @exclusions = options[:exclusions]
       @exclusions = [@exclusions] unless @exclusions.is_a?(Array)
+      @blank_equality = options[:blank_equality]
       @children = []
       if left_value.is_a?(Hash)
         if right_value.is_a?(Hash)
           left_value.each do |key, left_sub_value|
             @children << NodeComparison.new(
               left_sub_value, right_value[key], 
-              selector: "#{selector} > .#{key}", exclusions: @exclusions
+              blank_equality: @blank_equality,
+              exclusions: @exclusions,
+              selector: "#{selector} > .#{key}"
             )
           end
         end
@@ -25,21 +28,17 @@ module JsonDeepCompare
           left_value.each_with_index do |left_sub_value, i|
             @children << NodeComparison.new(
               left_sub_value, right_value[i], 
-              selector: "#{selector} :nth-child(#{i+1})", 
-              exclusions: @exclusions
+              blank_equality: @blank_equality,
+              exclusions: @exclusions,
+              selector: "#{selector} :nth-child(#{i+1})"
             )
           end
         end
       end
     end
 
-    def value_inspect(value)
-      str = value.inspect
-      if str.length >= 40
-        "#{value.class.name} #{str[0..37]}..."
-      else
-        str
-      end
+    def blank?(value)
+      value.respond_to?(:empty?) ? value.empty? : !value
     end
 
     def difference_message
@@ -58,7 +57,9 @@ module JsonDeepCompare
 
     def equal?
       if leaf?
-        selector_excluded? || @left_value == @right_value
+        selector_excluded? || 
+          @left_value == @right_value || 
+          (@blank_equality && blank?(@left_value) && blank?(@right_value))
       else
         @children.all?(&:equal?)
       end
@@ -113,6 +114,14 @@ module JsonDeepCompare
       }
     end
 
+    def value_inspect(value)
+      str = value.inspect
+      if str.length >= 40
+        "#{value.class.name} #{str[0..37]}..."
+      else
+        str
+      end
+    end
   end
 
   module Assertions

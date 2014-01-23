@@ -132,4 +132,13 @@ class NodeComparisonTestCase < Test::Unit::TestCase
     )
     assert comparison.equal?
   end
+
+  def test_blank_equality_option
+    lval = {'one' => 'two', 'three' => ''}
+    rval = {'one' => 'two', 'three' => nil}
+    comparison = JsonDeepCompare::NodeComparison.new(
+      lval, rval, blank_equality: true
+    )
+    assert comparison.equal?
+  end
 end
