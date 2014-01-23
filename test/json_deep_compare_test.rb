@@ -123,4 +123,13 @@ class NodeComparisonTestCase < Test::Unit::TestCase
     )
     assert comparison.equal?
   end
+
+  def test_exclusion_regexp
+    lval = {'one' => 'two', 'three' => 'four'}
+    rval = {'one' => 'two', 'three' => 'THREE'}
+    comparison = JsonDeepCompare::NodeComparison.new(
+      lval, rval, exclusions: [/> \.three$/]
+    )
+    assert comparison.equal?
+  end
 end

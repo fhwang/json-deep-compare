@@ -58,7 +58,7 @@ module JsonDeepCompare
 
     def equal?
       if leaf?
-        @exclusions.include?(@selector) || @left_value == @right_value
+        selector_excluded? || @left_value == @right_value
       else
         @children.all?(&:equal?)
       end
@@ -102,6 +102,17 @@ module JsonDeepCompare
     def leaf?
       @children.empty?
     end
+
+    def selector_excluded?
+      @exclusions.any? { |exclusion|
+        if exclusion.is_a?(String)
+          exclusion == @selector
+        else
+          @selector =~ exclusion
+        end
+      }
+    end
+
   end
 
   module Assertions
