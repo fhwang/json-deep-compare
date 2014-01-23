@@ -8,7 +8,10 @@ class DocumentComparisonTestCase < Test::Unit::TestCase
   )
     sub_pairs = [sub_pairs] if sub_pairs and sub_pairs.first.is_a?(String)
     comparison1 = JsonDeepCompare::DocumentComparison.new(lval, rval)
-    assert !comparison1.equal?
+    assert(
+      !comparison1.equal?, 
+      "Comparison of #{lval.inspect} to #{rval.inspect} should not have been equal"
+    )
     if message_template
       message1 = message_template
       sub_pairs.each_with_index do |sub_pair, i|
@@ -16,10 +19,13 @@ class DocumentComparisonTestCase < Test::Unit::TestCase
           sub(/:left#{i}/, sub_pair.first).
           sub(/:right#{i}/, sub_pair.last)
       end
-      assert_equal(message1, comparison1.difference_message)
+      assert_equal(message1, comparison1.difference_messages)
     end
     comparison2 = JsonDeepCompare::DocumentComparison.new(rval, lval)
-    assert !comparison2.equal?
+    assert(
+      !comparison2.equal?, 
+      "Comparison of #{rval.inspect} to #{lval.inspect} should not have been equal"
+    )
     if message_template
       message2 = message_template
       sub_pairs.each_with_index do |sub_pair, i|
@@ -27,7 +33,7 @@ class DocumentComparisonTestCase < Test::Unit::TestCase
           sub(/:left#{i}/, sub_pair.last).
           sub(/:right#{i}/, sub_pair.first)
       end
-      assert_equal(message2, comparison2.difference_message)
+      assert_equal(message2, comparison2.difference_messages)
     end
   end
 
@@ -69,6 +75,16 @@ class DocumentComparisonTestCase < Test::Unit::TestCase
     left_value = {"doc" => {"foo" => "bar"}}
     right_value = {"doc" => {"biz" => "bang", "bing" => nil}}
     assert_symmetrically_different(left_value, right_value)
+  end
+
+  def test_missing_keys
+    lval = {"outer" => {"key1" => "value1"}}
+    rval = {"outer" => {"key1" => "value1", "key2" => {"foo" => "bar"}}}
+    assert_symmetrically_different(
+      lval, rval,
+      "\":root > .outer > .key2\" expected to be :left0 but was :right0",
+      ["nil", {"foo" => "bar"}.inspect]
+    )
   end
 
   def test_detects_difference_in_type

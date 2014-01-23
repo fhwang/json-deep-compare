@@ -2,53 +2,60 @@ module JsonDeepCompare
   VERSION = '0.0.1'
 
   class DocumentComparison
-    attr_reader :left_value, :right_value
-
-    def initialize(left_value, right_value, options = {})
+    def initialize(lval, rval, options = {})
       if exclusions = options[:exclusions]
         options[:exclusions] = [exclusions] unless exclusions.is_a?(Array)
       else
         options[:exclusions] = []
       end
-      @root_comparison = NodeComparison.new(
-        left_value, right_value, ":root", options
-      )
+      @root_comparisons = []
+      @root_comparisons << NodeComparison.new(lval, rval, ":root", options)
+      @root_comparisons << NodeComparison.new(rval, lval, ":root", options)
     end
 
-    def difference_message
-      @root_comparison.difference_message
+    def difference_messages
+      ldiffs = @root_comparisons.first.differences
+      rdiffs = @root_comparisons.last.differences
+      differences = ldiffs.dup
+      ldiff_selectors = ldiffs.map { |ldiff| ldiff.selector }
+      rdiffs.each do |rdiff|
+        unless ldiff_selectors.include?(rdiff.selector)
+          differences << rdiff.reverse
+        end
+      end
+      differences = differences.sort_by &:selector
+      differences.map(&:message).join("\n")
     end
 
     def equal?
-      @root_comparison.equal?
+      @root_comparisons.all?(&:equal?)
     end
   end
 
   class NodeComparison
     ExcerptPadding = 15
-    attr_reader :left_value, :right_value, :selector
+    attr_reader :lval, :rval, :selector
 
-    def initialize(left_value, right_value, selector, options = {})
-      @left_value, @right_value, @selector, @options =
-        left_value, right_value, selector, options
+    def initialize(lval, rval, selector, options = {})
+      @lval, @rval, @selector, @options = lval, rval, selector, options
       @children = []
-      if left_value.is_a?(Hash)
-        if right_value.is_a?(Hash)
-          left_value.each do |key, left_sub_value|
+      if lval.is_a?(Hash)
+        if rval.is_a?(Hash)
+          lval.each do |key, left_sub_value|
             @children << NodeComparison.new(
               left_sub_value, 
-              right_value[key], 
+              rval[key], 
               "#{selector} > .#{key}", 
               options
             )
           end
         end
-      elsif left_value.is_a?(Array)
-        if right_value.is_a?(Array)
-          left_value.each_with_index do |left_sub_value, i|
+      elsif lval.is_a?(Array)
+        if rval.is_a?(Array)
+          lval.each_with_index do |left_sub_value, i|
             @children << NodeComparison.new(
               left_sub_value, 
-              right_value[i], 
+              rval[i], 
               "#{selector} :nth-child(#{i+1})",
               options
             )
@@ -65,16 +72,21 @@ module JsonDeepCompare
       @options[:blank_equality]
     end
 
-    def difference_message
-      unless equal?
+    def differences
+      if equal?
+        []
+      else
         if leaf?
           if excerptable_difference?
-            excerpted_difference
+            [excerpted_difference]
           else
-            "#{@selector.inspect} expected to be #{value_inspect(@left_value)} but was #{value_inspect(@right_value)}"
+            [Difference.new(
+              @selector, "expected to be :lval but was :rval",
+              lval: value_inspect(@lval), rval: value_inspect(@rval)
+            )]
           end
         else
-          @children.reject(&:equal?).map(&:difference_message).join("\n")
+          @children.map(&:differences).compact.flatten
         end
       end
     end
@@ -84,10 +96,9 @@ module JsonDeepCompare
         if selector_excluded?
           true
         elsif equality_proc
-          equality_proc.call(@left_value, @right_value)
+          equality_proc.call(@lval, @rval)
         else
-          @left_value == @right_value || 
-            (blank_equality? && blank?(@left_value) && blank?(@right_value))
+          @lval == @rval || (blank_equality? && blank?(@lval) && blank?(@rval))
         end
       else
         @children.all?(&:equal?)
@@ -99,38 +110,36 @@ module JsonDeepCompare
     end
 
     def excerptable_difference?
-      @left_value.is_a?(String) and @right_value.is_a?(String) && (
-        @left_value.size > ExcerptPadding * 2 || 
-        @right_value.size > ExcerptPadding * 2
+      @lval.is_a?(String) and @rval.is_a?(String) && (
+        @lval.size > ExcerptPadding * 2 || @rval.size > ExcerptPadding * 2
       )
     end
 
     def excerpted_difference
-      difference_start = (0..@left_value.length).detect { |i| 
-        @left_value[i] != @right_value[i]
-      }
+      difference_start = (0..@lval.length).detect { |i| @lval[i] != @rval[i] }
       range_start = if difference_start > ExcerptPadding
         difference_start - ExcerptPadding
       else
         0
       end
-      left_excerpt = @left_value[
-        range_start..difference_start+ExcerptPadding
-      ]
-      right_excerpt = @right_value[
-        range_start..difference_start+ExcerptPadding
-      ]
+      left_excerpt = @lval[range_start..difference_start+ExcerptPadding]
+      right_excerpt = @rval[range_start..difference_start+ExcerptPadding]
       if difference_start - ExcerptPadding > 0
         left_excerpt = "..." + left_excerpt
         right_excerpt = "..." + right_excerpt
       end
-      if difference_start + ExcerptPadding < @left_value.length
+      if difference_start + ExcerptPadding < @lval.length
         left_excerpt = left_excerpt + '...'
       end
-      if difference_start + ExcerptPadding < @right_value.length
+      if difference_start + ExcerptPadding < @rval.length
         right_excerpt = right_excerpt + '...'
       end
-      "#{@selector.inspect} differs starting at char #{difference_start}: #{left_excerpt.inspect} differs from #{right_excerpt.inspect}"
+      Difference.new(
+        @selector,
+        "differs starting at char :difference_start: :lval differs from :rval",
+        difference_start: difference_start.to_s,
+        lval: left_excerpt.inspect, rval: right_excerpt.inspect
+      )
     end
 
     def leaf?
@@ -155,13 +164,38 @@ module JsonDeepCompare
         str
       end
     end
+
+    class Difference
+      attr_reader :selector
+
+      def initialize(selector, msg_template, variables)
+        @selector, @msg_template, @variables = 
+          selector, msg_template, variables
+      end
+
+      def message
+        msg = @msg_template
+        @variables.each do |name, value|
+          msg = msg.gsub(/#{name.inspect}/, value)
+        end
+        "#{@selector.inspect} #{msg}"
+      end
+
+      def reverse
+        reversed_variables = {lval: @variables[:rval], rval: @variables[:lval]}
+        (@variables.keys - [:lval, :rval]).each do |other_var|
+          reversed_variables[other_var] = @variables[other_var]
+        end
+        Difference.new(@selector, @msg_template, reversed_variables)
+      end
+    end
   end
 
   module Assertions
     def assert_json_equal(expected, actual, exclusions = nil)
       comparison = DocumentComparison.new(expected, actual, exclusions: exclusions)
       unless comparison.equal?
-        fail comparison.difference_message
+        fail comparison.difference_messages
       end
     end
   end
