@@ -7,8 +7,12 @@ module JsonDeepCompare
         options[:exclusions] = []
       end
       @root_comparisons = []
-      @root_comparisons << NodeComparison.new(lval, rval, ":root", options)
-      @root_comparisons << NodeComparison.new(rval, lval, ":root", options)
+      @root_comparisons << NodeComparison.new(
+        lval, rval, ":root", options.merge(direction: :left)
+      )
+      @root_comparisons << NodeComparison.new(
+        rval, lval, ":root", options.merge(direction: :right)
+      )
     end
 
     def difference_messages

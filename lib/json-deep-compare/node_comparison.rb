@@ -63,9 +63,11 @@ module JsonDeepCompare
         if selector_excluded?
           true
         elsif equality_proc
-          equality_proc.call(@lval, @rval)
+          equality_proc.call(lval_for_equality, rval_for_equality)
+        elsif blank_equality? && blank?(lval_for_equality) && blank?(rval_for_equality)
+          true
         else
-          @lval == @rval || (blank_equality? && blank?(@lval) && blank?(@rval))
+          lval_for_equality == rval_for_equality
         end
       else
         @children.all?(&:equal?)
@@ -113,6 +115,34 @@ module JsonDeepCompare
       @children.empty?
     end
 
+    def left_to_right?
+      @options[:direction] == :left
+    end
+
+    def lval_for_equality
+      @_lval_for_equality ||= begin
+        if left_to_right? && substitution
+          substitution
+        else
+          lval
+        end
+      end
+    end
+
+    def right_to_left?
+      @options[:direction] == :right
+    end
+
+    def rval_for_equality
+      @_rval_for_equality ||= begin
+        if right_to_left? && substitution
+          substitution
+        else
+          rval
+        end
+      end
+    end
+
     def selector_excluded?
       @options[:exclusions].any? { |exclusion|
         if exclusion.is_a?(String)
@@ -121,6 +151,10 @@ module JsonDeepCompare
           @selector =~ exclusion
         end
       }
+    end
+
+    def substitution
+      @options[:substitutions] && @options[:substitutions][selector]
     end
 
     def value_inspect(value)

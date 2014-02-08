@@ -198,4 +198,13 @@ class DocumentComparisonTestCase < Test::Unit::TestCase
     )
     assert comparison.equal?
   end
+
+  def test_substitutions
+    lval = {'one' => 'two', 'three' => 'four'}
+    rval = {'one' => 'two', 'three' => 'THREE'}
+    comparison = JsonDeepCompare::DocumentComparison.new(
+      lval, rval, substitutions: {":root > .three" => 'THREE'}
+    )
+    assert comparison.equal?
+  end
 end

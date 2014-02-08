@@ -1,7 +1,7 @@
 module JsonDeepCompare
   module Assertions
-    def assert_json_equal(expected, actual, exclusions = nil)
-      comparison = DocumentComparison.new(expected, actual, exclusions: exclusions)
+    def assert_json_equal(expected, actual, options = {})
+      comparison = DocumentComparison.new(expected, actual, options)
       unless comparison.equal?
         fail comparison.difference_messages
       end
