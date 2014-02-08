@@ -1,6 +1,6 @@
 require 'test/unit'
-$: << '.'
-require 'lib/json-deep-compare'
+$: << 'lib'
+require 'json-deep-compare'
 
 class DocumentComparisonTestCase < Test::Unit::TestCase
   def assert_symmetrically_different(
