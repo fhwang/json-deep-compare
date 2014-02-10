@@ -111,6 +111,10 @@ module JsonDeepCompare
       )
     end
 
+    def has_substitution?
+      @options[:substitutions] && @options[:substitutions].has_key?(selector)
+    end
+
     def leaf?
       @children.empty?
     end
@@ -121,7 +125,7 @@ module JsonDeepCompare
 
     def lval_for_equality
       @_lval_for_equality ||= begin
-        if left_to_right? && substitution
+        if left_to_right? && has_substitution?
           substitution
         else
           lval
@@ -135,7 +139,7 @@ module JsonDeepCompare
 
     def rval_for_equality
       @_rval_for_equality ||= begin
-        if right_to_left? && substitution
+        if right_to_left? && has_substitution?
           substitution
         else
           rval
@@ -154,7 +158,7 @@ module JsonDeepCompare
     end
 
     def substitution
-      @options[:substitutions] && @options[:substitutions][selector]
+      @options[:substitutions][selector]
     end
 
     def value_inspect(value)

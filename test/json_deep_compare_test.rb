@@ -207,4 +207,19 @@ class DocumentComparisonTestCase < Test::Unit::TestCase
     )
     assert comparison.equal?
   end
+
+  def test_substitions_with_falsy_values
+    lval = {'one' => 'false'}
+    rval = {'one' => false}
+    comparison = JsonDeepCompare::DocumentComparison.new(
+      lval, rval, substitutions: {":root > .one" => false}
+    )
+    assert comparison.equal?
+    lval = {'one' => 'null'}
+    rval = {'one' => nil}
+    comparison = JsonDeepCompare::DocumentComparison.new(
+      lval, rval, substitutions: {":root > .one" => nil}
+    )
+    assert comparison.equal?
+  end
 end
