@@ -222,4 +222,17 @@ class DocumentComparisonTestCase < Test::Unit::TestCase
     )
     assert comparison.equal?
   end
+
+  def test_failure_while_substituting
+    lval = {'one' => 'raw_value'}
+    rval = {'one' => 'actual_value'}
+    comparison = JsonDeepCompare::DocumentComparison.new(
+      lval, rval, substitutions: {":root > .one" => 'expected_value'}
+    )
+    assert !comparison.equal?
+    assert_match(
+      /":root > .one" expected to be "expected_value" but was "actual_value"/, 
+      comparison.difference_messages
+    )
+  end
 end

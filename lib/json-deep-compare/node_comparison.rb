@@ -49,7 +49,8 @@ module JsonDeepCompare
           else
             [Difference.new(
               @selector, "expected to be :lval but was :rval",
-              lval: value_inspect(@lval), rval: value_inspect(@rval)
+              lval: value_inspect(lval_for_equality), 
+              rval: value_inspect(rval_for_equality)
             )]
           end
         else
