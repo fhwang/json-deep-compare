@@ -235,4 +235,40 @@ class DocumentComparisonTestCase < Test::Unit::TestCase
       comparison.difference_messages
     )
   end
+
+  def test_substitute_with_block
+    lval = {
+      'one' => 1, 
+      'two' => {
+        'three' => 3, 
+        'four' => 'four', 
+        'five' => [
+          {'six' => 'six'}, {'seven' => 7}
+        ]
+      }
+    }
+    rval = {
+      'one' => 'one', 
+      'two' => {
+        'three' => 'three', 
+        'four' => 'four', 
+        'five' => [
+          {'six' => 'six'}, {'seven' => 'seven'}
+        ]
+      }
+    }
+    comparison = JsonDeepCompare::DocumentComparison.new(
+      lval, rval,
+      substitute_with: Proc.new { |root|
+        root.one 'one'
+        root.two do |two|
+          two.three 'three'
+          two.five(2) do |five|
+            five.seven 'seven'
+          end
+        end
+      }
+    )
+    assert comparison.equal?
+  end
 end
