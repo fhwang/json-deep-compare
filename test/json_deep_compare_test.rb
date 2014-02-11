@@ -244,6 +244,11 @@ class DocumentComparisonTestCase < Test::Unit::TestCase
         'four' => 'four', 
         'five' => [
           {'six' => 'six'}, {'seven' => 7}
+        ],
+        'eight' => [
+          'nine',
+          10,
+          'eleven'
         ]
       }
     }
@@ -254,6 +259,11 @@ class DocumentComparisonTestCase < Test::Unit::TestCase
         'four' => 'four', 
         'five' => [
           {'six' => 'six'}, {'seven' => 'seven'}
+        ],
+        'eight' => [
+          'nine',
+          'ten',
+          'eleven'
         ]
       }
     }
@@ -266,6 +276,7 @@ class DocumentComparisonTestCase < Test::Unit::TestCase
           two.five(2) do |five|
             five.seven 'seven'
           end
+          two.eight(2, 'ten')
         end
       }
     )

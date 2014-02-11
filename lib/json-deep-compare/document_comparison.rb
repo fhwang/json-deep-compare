@@ -66,6 +66,11 @@ module JsonDeepCompare
               sub_node = Node.new(@selector + " > .#{meth}")
             end
             yield sub_node
+          elsif args.size == 2
+            sub_node = Node.new(
+              @selector + " > .#{meth} :nth-child(#{args.first})"
+            )
+            sub_node.value = args.last
           else
             sub_node = Node.new(@selector + " > .#{meth}")
             sub_node.value = args.first
